@@ -8,16 +8,11 @@ file = "attendees.xlsx"
 # قراءة البيانات
 data = pd.read_excel(file)
 
-# إضافة عمود الحضور لو مش موجود
+# إضافة عمود Attended لو مش موجود
 if "Attended" not in data.columns:
     data["Attended"] = ""
 
 st.title("🎟️ Iftar Check-in System")
-
-# زر إعادة الصفحة
-def reset():
-    st.session_state["ticket"] = None
-    st.session_state["search"] = None
 
 # اختيار الطريقة
 option = st.radio(
@@ -27,9 +22,11 @@ option = st.radio(
 
 ticket = None
 
-# -------------------
+
+# =========================
 # QR SCAN
-# -------------------
+# =========================
+
 if option == "Scan QR Code":
 
     ticket = qrcode_scanner("Scan QR Code")
@@ -40,8 +37,12 @@ if option == "Scan QR Code":
 
         person = data[data["Ticket_ID"].astype(str).str.strip() == ticket]
 
-        if person.empty:
+        if person.empty():
+
             st.error("❌ INVALID TICKET")
+
+            if st.button("⬅ Back to Home"):
+                st.rerun()
 
         else:
 
@@ -66,11 +67,14 @@ if option == "Scan QR Code":
             st.write("**Email:**", email)
             st.write("**Ticket ID:**", ticket_id)
 
-            st.button("⬅ Back to Home", on_click=reset)
+            if st.button("⬅ Back to Home"):
+                st.rerun()
 
-# -------------------
+
+# =========================
 # SEARCH
-# -------------------
+# =========================
+
 if option == "Search Attendee":
 
     search = st.text_input("Search by Name / Email / Ticket ID")
@@ -80,22 +84,23 @@ if option == "Search Attendee":
         search = search.lower()
 
         results = data[
-            data["Name"].astype(str).str.lower().str.contains(search) |
-            data["Email"].astype(str).str.lower().str.contains(search) |
-            data["Ticket_ID"].astype(str).str.lower().str.contains(search)
+            data["Name"].astype(str).str.lower().str.contains(search)
+            | data["Email"].astype(str).str.lower().str.contains(search)
+            | data["Ticket_ID"].astype(str).str.lower().str.contains(search)
         ]
 
         if results.empty:
 
-            st.error("No attendee found ❌")
+            st.error("❌ No attendee found")
 
         else:
 
-            st.write("### Search Results")
+            st.write("### Results")
 
             for i, row in results.iterrows():
 
                 st.write("---")
+
                 st.write("**Name:**", row["Name"])
                 st.write("**Email:**", row["Email"])
                 st.write("**Ticket ID:**", row["Ticket_ID"])
@@ -113,11 +118,13 @@ if option == "Search Attendee":
 
                         st.success(f"{row['Name']} Checked In ✅")
 
-            st.button("⬅ Back to Home", on_click=reset)
+            if st.button("⬅ Back to Home"):
+                st.rerun()
 
-# -------------------
-# DOWNLOAD SHEET
-# -------------------
+
+# =========================
+# DOWNLOAD ATTENDANCE
+# =========================
 
 st.divider()
 
