@@ -5,127 +5,117 @@ from io import BytesIO
 
 file = "attendees.xlsx"
 
-# قراءة ملف الحضور
 data = pd.read_excel(file)
 
-# إضافة عمود Attended لو مش موجود
 if "Attended" not in data.columns:
     data["Attended"] = ""
 
 st.title("🎟️ Iftar Check-in System")
 
-# اختيار طريقة الدخول
-option = st.radio(
-    "Choose Check-in Method",
-    ["Scan QR Code", "Search Attendee"]
-)
-
-ticket = None
+# التحكم في الصفحة
+if "page" not in st.session_state:
+    st.session_state.page = "home"
 
 
-# =========================
-# QR SCAN
-# =========================
+# زر الرجوع
+def go_home():
+    st.session_state.page = "home"
 
-if option == "Scan QR Code":
 
-    ticket = qrcode_scanner("Scan QR Code")
+# الصفحة الرئيسية
+if st.session_state.page == "home":
 
-    if ticket:
+    option = st.radio(
+        "Choose Check-in Method",
+        ["Scan QR Code", "Search Attendee"]
+    )
 
-        ticket = str(ticket).strip()
+    if option == "Scan QR Code":
 
-        person = data[data["Ticket_ID"].astype(str).str.strip() == ticket]
+        ticket = qrcode_scanner("Scan QR Code")
 
-        if person.empty:
+        if ticket:
+            st.session_state.ticket = ticket
+            st.session_state.page = "result"
+            st.rerun()
 
-            st.error("❌ INVALID TICKET")
+    if option == "Search Attendee":
 
-            if st.button("⬅ Back to Home"):
-                st.rerun()
+        search = st.text_input("Search by Name / Email / Ticket ID")
 
-        else:
+        if search:
 
-            idx = person.index[0]
+            search = search.lower()
 
-            name = data.loc[idx, "Name"]
-            email = data.loc[idx, "Email"]
-            ticket_id = data.loc[idx, "Ticket_ID"]
+            results = data[
+                data["Name"].astype(str).str.lower().str.contains(search)
+                | data["Email"].astype(str).str.lower().str.contains(search)
+                | data["Ticket_ID"].astype(str).str.lower().str.contains(search)
+            ]
 
-            if data.loc[idx, "Attended"] == "YES":
+            if results.empty:
 
-                st.warning("⚠️ ALREADY CHECKED")
+                st.error("❌ No attendee found")
 
             else:
 
-                data.loc[idx, "Attended"] = "YES"
-                data.to_excel(file, index=False)
+                for i, row in results.iterrows():
 
-                st.success("✅ APPROVED")
+                    st.write("---")
+                    st.write("Name:", row["Name"])
+                    st.write("Email:", row["Email"])
+                    st.write("Ticket ID:", row["Ticket_ID"])
 
-            st.write("**Name:**", name)
-            st.write("**Email:**", email)
-            st.write("**Ticket ID:**", ticket_id)
+                    if row["Attended"] == "YES":
+                        st.warning("⚠️ Already Checked")
 
-            if st.button("⬅ Back to Home"):
-                st.rerun()
+                    else:
+                        if st.button(f"Check-in {row['Ticket_ID']}"):
+
+                            data.loc[i, "Attended"] = "YES"
+                            data.to_excel(file, index=False)
+
+                            st.success("Checked In ✅")
 
 
-# =========================
-# SEARCH
-# =========================
+# صفحة النتيجة
+elif st.session_state.page == "result":
 
-if option == "Search Attendee":
+    ticket = str(st.session_state.ticket).strip()
 
-    search = st.text_input("Search by Name / Email / Ticket ID")
+    person = data[data["Ticket_ID"].astype(str).str.strip() == ticket]
 
-    if search:
+    if person.empty:
 
-        search = search.lower()
+        st.error("❌ INVALID TICKET")
 
-        results = data[
-            data["Name"].astype(str).str.lower().str.contains(search)
-            | data["Email"].astype(str).str.lower().str.contains(search)
-            | data["Ticket_ID"].astype(str).str.lower().str.contains(search)
-        ]
+    else:
 
-        if results.empty:
+        idx = person.index[0]
 
-            st.error("❌ No attendee found")
+        name = data.loc[idx, "Name"]
+        email = data.loc[idx, "Email"]
+        ticket_id = data.loc[idx, "Ticket_ID"]
+
+        if data.loc[idx, "Attended"] == "YES":
+
+            st.warning("⚠️ ALREADY CHECKED")
 
         else:
 
-            st.write("### Results")
+            data.loc[idx, "Attended"] = "YES"
+            data.to_excel(file, index=False)
 
-            for i, row in results.iterrows():
+            st.success("✅ APPROVED")
 
-                st.write("---")
+        st.write("Name:", name)
+        st.write("Email:", email)
+        st.write("Ticket ID:", ticket_id)
 
-                st.write("**Name:**", row["Name"])
-                st.write("**Email:**", row["Email"])
-                st.write("**Ticket ID:**", row["Ticket_ID"])
-
-                if row["Attended"] == "YES":
-
-                    st.warning("⚠️ Already Checked")
-
-                else:
-
-                    if st.button(f"Check-in {row['Ticket_ID']}"):
-
-                        data.loc[i, "Attended"] = "YES"
-                        data.to_excel(file, index=False)
-
-                        st.success(f"{row['Name']} Checked In ✅")
-
-            if st.button("⬅ Back to Home"):
-                st.rerun()
+    st.button("⬅ Back to Home", on_click=go_home)
 
 
-# =========================
-# DOWNLOAD ATTENDANCE
-# =========================
-
+# تحميل الشيت
 st.divider()
 
 buffer = BytesIO()
@@ -138,4 +128,5 @@ st.download_button(
     file_name="attendance_updated.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
+
 
