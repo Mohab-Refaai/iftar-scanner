@@ -4,7 +4,12 @@ from streamlit_qrcode_scanner import qrcode_scanner
 
 file = "attendees.xlsx"
 
+# قراءة الشيت
 data = pd.read_excel(file)
+
+# لو عمود Attended مش موجود نضيفه
+if "Attended" not in data.columns:
+    data["Attended"] = ""
 
 st.title("Iftar Check-in System")
 
@@ -16,17 +21,19 @@ option = st.radio(
 
 ticket = None
 
-# الخيار الأول: الكاميرا
+# Scan بالكاميرا
 if option == "Scan QR Code":
     ticket = qrcode_scanner("Scan QR Code")
 
-# الخيار الثاني: البحث اليدوي
+# البحث اليدوي
 if option == "Search by Ticket ID":
     ticket = st.text_input("Enter Ticket ID")
 
 if ticket:
 
-    person = data[data["Ticket_ID"] == ticket]
+    ticket = str(ticket).strip()
+
+    person = data[data["Ticket_ID"].astype(str).str.strip() == ticket]
 
     if person.empty:
         st.error("INVALID TICKET ❌")
@@ -35,11 +42,17 @@ if ticket:
 
         idx = person.index[0]
 
+        name = data.loc[idx, "Name"]
+        email = data.loc[idx, "Email"]
+        ticket_id = data.loc[idx, "Ticket_ID"]
+
         if data.loc[idx, "Attended"] == "YES":
 
             st.warning("ALREADY CHECKED ⚠️")
 
-            st.write(person)
+            st.write("Name:", name)
+            st.write("Email:", email)
+            st.write("Ticket ID:", ticket_id)
 
         else:
 
@@ -49,4 +62,6 @@ if ticket:
 
             st.success("APPROVED ✅")
 
-            st.write(person)
+            st.write("Name:", name)
+            st.write("Email:", email)
+            st.write("Ticket ID:", ticket_id)
