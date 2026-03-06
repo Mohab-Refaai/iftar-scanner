@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from streamlit_qrcode_scanner import qrcode_scanner
 
 file = "attendees.xlsx"
 
@@ -7,7 +8,21 @@ data = pd.read_excel(file)
 
 st.title("Iftar Check-in System")
 
-ticket = st.text_input("Scan QR Code")
+# اختيار طريقة الإدخال
+option = st.radio(
+    "Choose Check-in Method",
+    ["Scan QR Code", "Search by Ticket ID"]
+)
+
+ticket = None
+
+# الخيار الأول: الكاميرا
+if option == "Scan QR Code":
+    ticket = qrcode_scanner("Scan QR Code")
+
+# الخيار الثاني: البحث اليدوي
+if option == "Search by Ticket ID":
+    ticket = st.text_input("Enter Ticket ID")
 
 if ticket:
 
