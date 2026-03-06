@@ -5,7 +5,7 @@ from io import BytesIO
 
 file = "attendees.xlsx"
 
-# قراءة البيانات
+# قراءة ملف الحضور
 data = pd.read_excel(file)
 
 # إضافة عمود Attended لو مش موجود
@@ -14,7 +14,7 @@ if "Attended" not in data.columns:
 
 st.title("🎟️ Iftar Check-in System")
 
-# اختيار الطريقة
+# اختيار طريقة الدخول
 option = st.radio(
     "Choose Check-in Method",
     ["Scan QR Code", "Search Attendee"]
@@ -37,7 +37,7 @@ if option == "Scan QR Code":
 
         person = data[data["Ticket_ID"].astype(str).str.strip() == ticket]
 
-        if person.empty():
+        if person.empty:
 
             st.error("❌ INVALID TICKET")
 
@@ -138,3 +138,4 @@ st.download_button(
     file_name="attendance_updated.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
+
