@@ -17,11 +17,8 @@ st.set_page_config(page_title="Iftar Check-in System", page_icon="🎟️", layo
 # =========================
 def load_data():
     df = pd.read_excel(FILE_PATH)
-
-    # تنظيف أسماء الأعمدة من المسافات
     df.columns = df.columns.astype(str).str.strip()
 
-    # لو عمود الحضور مش موجود نضيفه
     if "Attended" not in df.columns:
         df["Attended"] = ""
 
@@ -76,6 +73,7 @@ def go_home():
     st.session_state.page = "home"
     st.session_state.ticket_value = ""
     st.session_state.search_value = ""
+    st.session_state.selected_person = None
 
 
 def process_ticket(ticket_value, df, col_map):
@@ -106,6 +104,15 @@ def process_ticket(ticket_value, df, col_map):
 
     display_person_details(row, col_map)
     return df
+
+
+def build_search_label(row, col_map):
+    name = normalize_text(row[col_map["name"]])
+    email = normalize_text(row[col_map["email"]])
+    phone = normalize_text(row[col_map["phone"]])
+    ticket_id = normalize_text(row[col_map["ticket_id"]])
+
+    return f"{name} | {phone} | {email} | {ticket_id}"
 
 
 # =========================
@@ -153,6 +160,9 @@ if "ticket_value" not in st.session_state:
 if "search_value" not in st.session_state:
     st.session_state.search_value = ""
 
+if "selected_person" not in st.session_state:
+    st.session_state.selected_person = None
+
 
 # =========================
 # UI
@@ -187,7 +197,7 @@ if st.session_state.page == "home":
         search = st.text_input(
             "Search by Name / Email / Phone / Ticket ID",
             value=st.session_state.search_value,
-            placeholder="Type any name, email, phone, or ticket ID..."
+            placeholder="Type any part of the name, email, phone, or ticket ID..."
         )
 
         st.session_state.search_value = search
@@ -202,41 +212,40 @@ if st.session_state.page == "home":
                 | data[col_map["ticket_id"]].astype(str).str.lower().str.contains(search_lower, na=False)
             )
 
-            results = data[result_mask]
+            results = data[result_mask].copy()
 
             if results.empty:
                 st.error("❌ No attendee found")
             else:
+                results = results.reset_index()
+                results["display_label"] = results.apply(
+                    lambda row: build_search_label(row, col_map), axis=1
+                )
+
                 st.success(f"Found {len(results)} result(s)")
 
-                for i, row in results.iterrows():
-                    with st.container():
-                        st.write("---")
-                        c1, c2 = st.columns([3, 1])
+                selected_label = st.selectbox(
+                    "Select attendee",
+                    options=results["display_label"].tolist(),
+                    index=0
+                )
 
-                        with c1:
-                            st.write("**Name:**", normalize_text(row[col_map["name"]]))
-                            st.write("**Email:**", normalize_text(row[col_map["email"]]))
-                            st.write("**Phone:**", normalize_text(row[col_map["phone"]]))
-                            st.write("**Ticket ID:**", normalize_text(row[col_map["ticket_id"]]))
-                            st.write("**Meal / Ticket Type:**", normalize_text(row[col_map["ticket_type"]]))
-                            st.write("**Payment Method:**", normalize_text(row[col_map["payment_method"]]))
+                selected_row = results[results["display_label"] == selected_label].iloc[0]
+                selected_idx = selected_row["index"]
 
-                            if is_attended(row[col_map["attended"]]):
-                                st.warning("⚠️ Already Checked")
-                            else:
-                                st.info("Not checked in yet")
+                st.write("")
+                display_person_details(data.loc[selected_idx], col_map)
 
-                        with c2:
-                            if st.button("Check-in", key=f"checkin_{i}"):
-                                if not is_attended(data.loc[i, col_map["attended"]]):
-                                    data.loc[i, col_map["attended"]] = "YES"
-                                    save_data(data)
-                                    st.success("✅ Checked In Successfully")
-                                    st.rerun()
-                                else:
-                                    st.warning("⚠️ Already Checked")
-                                    st.rerun()
+                if is_attended(data.loc[selected_idx, col_map["attended"]]):
+                    st.warning("⚠️ ALREADY CHECKED")
+                else:
+                    st.info("Not checked in yet")
+
+                    if st.button("✅ Check-in Selected Attendee", key=f"checkin_{selected_idx}"):
+                        data.loc[selected_idx, col_map["attended"]] = "YES"
+                        save_data(data)
+                        st.success("✅ Checked In Successfully")
+                        st.rerun()
 
 
 # =========================
