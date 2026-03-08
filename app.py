@@ -23,7 +23,6 @@ def load_data():
         df["Attended"] = ""
 
     df["Attended"] = df["Attended"].fillna("")
-
     return df
 
 
@@ -57,6 +56,7 @@ def get_column_map(df):
 
 def display_person_details(row, col_map):
     st.markdown("### Attendee Details")
+
     c1, c2 = st.columns(2)
 
     with c1:
@@ -74,10 +74,10 @@ def go_home():
     st.session_state.page = "home"
     st.session_state.ticket_value = ""
     st.session_state.search_value = ""
-    st.session_state.selected_person = None
 
 
 def process_ticket(ticket_value, df, col_map):
+
     ticket_value = normalize_text(ticket_value)
 
     if not ticket_value:
@@ -85,7 +85,8 @@ def process_ticket(ticket_value, df, col_map):
         return df
 
     matched = df[
-        df[col_map["ticket_id"]].astype(str).str.strip().str.lower() == ticket_value.lower()
+        df[col_map["ticket_id"]].astype(str).str.strip().str.lower()
+        == ticket_value.lower()
     ]
 
     if matched.empty:
@@ -97,6 +98,7 @@ def process_ticket(ticket_value, df, col_map):
 
     if is_attended(row[col_map["attended"]]):
         st.warning("⚠️ ALREADY CHECKED")
+
     else:
         df.loc[idx, col_map["attended"]] = "YES"
         save_data(df)
@@ -108,6 +110,7 @@ def process_ticket(ticket_value, df, col_map):
 
 
 def build_search_label(row, col_map):
+
     name = normalize_text(row[col_map["name"]])
     email = normalize_text(row[col_map["email"]])
     phone = normalize_text(row[col_map["phone"]])
@@ -136,15 +139,9 @@ if "page" not in st.session_state:
 if "ticket_value" not in st.session_state:
     st.session_state.ticket_value = ""
 
-if "search_value" not in st.session_state:
-    st.session_state.search_value = ""
-
-if "selected_person" not in st.session_state:
-    st.session_state.selected_person = None
-
 
 # =========================
-# HEADER + RESET
+# HEADER
 # =========================
 col1, col2 = st.columns([6,1])
 
@@ -156,7 +153,6 @@ with col2:
         df_reset = load_data()
         df_reset["Attended"] = ""
         save_data(df_reset)
-
         st.session_state.clear()
         st.success("System reset successfully")
         st.rerun()
@@ -175,6 +171,9 @@ if st.session_state.page == "home":
 
     st.write("")
 
+    # =========================
+    # QR SCAN
+    # =========================
     if option == "Scan QR Code":
 
         st.subheader("Scan Ticket QR")
@@ -186,16 +185,25 @@ if st.session_state.page == "home":
             st.session_state.page = "result"
             st.rerun()
 
+    # =========================
+    # SEARCH
+    # =========================
     elif option == "Search Attendee":
 
         st.subheader("Search Attendee")
 
-        search = st.text_input(
-            "Search by Name / Email / Phone / Ticket ID",
-            value=st.session_state.search_value
-        )
+        colA, colB = st.columns([5,1])
 
-        st.session_state.search_value = search
+        with colA:
+            search = st.text_input(
+                "Search by Name / Email / Phone / Ticket ID",
+                key="search_value"
+            )
+
+        with colB:
+            if st.button("Clear"):
+                st.session_state.search_value = ""
+                st.rerun()
 
         if search:
 
@@ -227,7 +235,10 @@ if st.session_state.page == "home":
                     options=results["display_label"].tolist()
                 )
 
-                selected_row = results[results["display_label"] == selected_label].iloc[0]
+                selected_row = results[
+                    results["display_label"] == selected_label
+                ].iloc[0]
+
                 selected_idx = selected_row["index"]
 
                 st.write("")
@@ -264,7 +275,7 @@ elif st.session_state.page == "result":
 
 
 # =========================
-# DOWNLOAD UPDATED SHEET
+# DOWNLOAD SHEET
 # =========================
 st.divider()
 
