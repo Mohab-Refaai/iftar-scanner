@@ -70,10 +70,26 @@ def display_person_details(row, col_map):
         st.write("**Payment Method:**", normalize_text(row[col_map["payment_method"]]))
 
 
-def go_home():
+# =========================
+# ACTION FUNCTIONS
+# =========================
+def clear_search():
+    st.session_state.search_value = ""
+
+
+def reset_system():
+    df_reset = load_data()
+    df_reset["Attended"] = ""
+    save_data(df_reset)
+
     st.session_state.page = "home"
     st.session_state.ticket_value = ""
     st.session_state.search_value = ""
+
+
+def go_home():
+    st.session_state.page = "home"
+    st.session_state.ticket_value = ""
 
 
 def process_ticket(ticket_value, df, col_map):
@@ -102,7 +118,6 @@ def process_ticket(ticket_value, df, col_map):
     else:
         df.loc[idx, col_map["attended"]] = "YES"
         save_data(df)
-        row = df.loc[idx]
         st.success("✅ APPROVED")
 
     display_person_details(row, col_map)
@@ -131,7 +146,7 @@ col_map = get_column_map(data)
 
 
 # =========================
-# SESSION STATE
+# SESSION STATE INIT
 # =========================
 if "page" not in st.session_state:
     st.session_state.page = "home"
@@ -154,18 +169,7 @@ with col1:
 with col2:
     with st.expander("⚙️"):
         st.write("System tools")
-
-        if st.button("Reset Attendance"):
-            df_reset = load_data()
-            df_reset["Attended"] = ""
-            save_data(df_reset)
-
-            st.session_state.page = "home"
-            st.session_state.ticket_value = ""
-            st.session_state.search_value = ""
-
-            st.success("Attendance reset successfully")
-            st.rerun()
+        st.button("Reset Attendance", on_click=reset_system)
 
 
 # =========================
@@ -214,9 +218,7 @@ if st.session_state.page == "home":
             )
 
         with colB:
-            if st.button("Clear"):
-                st.session_state.search_value = ""
-                st.rerun()
+            st.button("Clear", on_click=clear_search)
 
         if search:
 
@@ -306,4 +308,3 @@ st.download_button(
     file_name="attendance_updated.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
-
