@@ -18,7 +18,10 @@ st.set_page_config(page_title="Iftar Check-in System", page_icon="🎟️", layo
 def load_data():
     df = pd.read_excel(FILE_PATH)
 
-    # Ensure important columns exist
+    # تنظيف أسماء الأعمدة من المسافات
+    df.columns = df.columns.astype(str).str.strip()
+
+    # لو عمود الحضور مش موجود نضيفه
     if "Attended" not in df.columns:
         df["Attended"] = ""
 
@@ -40,22 +43,17 @@ def is_attended(value):
     return value in ["yes", "y", "true", "1", "checked", "attended"]
 
 
-def find_column(df, possible_names):
-    for col in df.columns:
-        if col in possible_names:
-            return col
-    return None
-
-
 def get_column_map(df):
+    columns = {col.strip(): col for col in df.columns}
+
     return {
-        "name": find_column(df, ["Full Name", "Name"]),
-        "email": find_column(df, ["Email Address", "Email"]),
-        "phone": find_column(df, ["Phone Number", "Phone"]),
-        "ticket_id": find_column(df, ["Ticket_ID", "Ticket ID"]),
-        "ticket_type": find_column(df, ["Please select your ticket type:", "Ticket Type", "Meal Type"]),
-        "payment_method": find_column(df, ["Payment Method"]),
-        "attended": find_column(df, ["Attended"]),
+        "name": columns.get("Full Name"),
+        "email": columns.get("Email Address"),
+        "phone": columns.get("Phone Number"),
+        "ticket_id": columns.get("Ticket_ID"),
+        "ticket_type": columns.get("Please select your ticket type:"),
+        "payment_method": columns.get("Payment Method"),
+        "attended": columns.get("Attended"),
     }
 
 
@@ -64,20 +62,14 @@ def display_person_details(row, col_map):
     c1, c2 = st.columns(2)
 
     with c1:
-        if col_map["name"]:
-            st.write("**Name:**", normalize_text(row[col_map["name"]]))
-        if col_map["email"]:
-            st.write("**Email:**", normalize_text(row[col_map["email"]]))
-        if col_map["phone"]:
-            st.write("**Phone:**", normalize_text(row[col_map["phone"]]))
+        st.write("**Name:**", normalize_text(row[col_map["name"]]))
+        st.write("**Email:**", normalize_text(row[col_map["email"]]))
+        st.write("**Phone:**", normalize_text(row[col_map["phone"]]))
 
     with c2:
-        if col_map["ticket_id"]:
-            st.write("**Ticket ID:**", normalize_text(row[col_map["ticket_id"]]))
-        if col_map["ticket_type"]:
-            st.write("**Meal / Ticket Type:**", normalize_text(row[col_map["ticket_type"]]))
-        if col_map["payment_method"]:
-            st.write("**Payment Method:**", normalize_text(row[col_map["payment_method"]]))
+        st.write("**Ticket ID:**", normalize_text(row[col_map["ticket_id"]]))
+        st.write("**Meal / Ticket Type:**", normalize_text(row[col_map["ticket_type"]]))
+        st.write("**Payment Method:**", normalize_text(row[col_map["payment_method"]]))
 
 
 def go_home():
@@ -93,13 +85,9 @@ def process_ticket(ticket_value, df, col_map):
         st.error("❌ INVALID TICKET")
         return df
 
-    ticket_col = col_map["ticket_id"]
-
-    if not ticket_col:
-        st.error("❌ Ticket_ID column not found in Excel file")
-        return df
-
-    matched = df[df[ticket_col].astype(str).str.strip() == ticket_value]
+    matched = df[
+        df[col_map["ticket_id"]].astype(str).str.strip().str.lower() == ticket_value.lower()
+    ]
 
     if matched.empty:
         st.error("❌ INVALID TICKET")
@@ -224,7 +212,6 @@ if st.session_state.page == "home":
                 for i, row in results.iterrows():
                     with st.container():
                         st.write("---")
-
                         c1, c2 = st.columns([3, 1])
 
                         with c1:
@@ -241,7 +228,7 @@ if st.session_state.page == "home":
                                 st.info("Not checked in yet")
 
                         with c2:
-                            if st.button(f"Check-in", key=f"checkin_{i}"):
+                            if st.button("Check-in", key=f"checkin_{i}"):
                                 if not is_attended(data.loc[i, col_map["attended"]]):
                                     data.loc[i, col_map["attended"]] = "YES"
                                     save_data(data)
@@ -258,8 +245,8 @@ if st.session_state.page == "home":
 elif st.session_state.page == "result":
     st.subheader("Ticket Result")
 
-    data = load_data()  # reload latest version before processing
-    data = process_ticket(st.session_state.ticket_value, data, col_map)
+    data = load_data()
+    process_ticket(st.session_state.ticket_value, data, col_map)
 
     st.write("")
     st.button("⬅ Back to Home", on_click=go_home)
