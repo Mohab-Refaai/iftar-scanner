@@ -11,7 +11,6 @@ FILE_PATH = "attendees.xlsx"
 
 st.set_page_config(page_title="Iftar Check-in System", page_icon="🎟️", layout="wide")
 
-
 # =========================
 # HELPERS
 # =========================
@@ -103,12 +102,10 @@ def process_ticket(ticket_value, df, col_map):
     else:
         df.loc[idx, col_map["attended"]] = "YES"
         save_data(df)
-
         row = df.loc[idx]
         st.success("✅ APPROVED")
 
     display_person_details(row, col_map)
-
     return df
 
 
@@ -149,23 +146,26 @@ if "search_value" not in st.session_state:
 # =========================
 # HEADER
 # =========================
-col1, col2 = st.columns([6,1])
+col1, col2 = st.columns([8,1])
 
 with col1:
     st.title("🎟️ Iftar Check-in System")
 
 with col2:
-    if st.button("🔄 Reset"):
-        df_reset = load_data()
-        df_reset["Attended"] = ""
-        save_data(df_reset)
+    with st.expander("⚙️"):
+        st.write("System tools")
 
-        st.session_state.page = "home"
-        st.session_state.ticket_value = ""
-        st.session_state.search_value = ""
+        if st.button("Reset Attendance"):
+            df_reset = load_data()
+            df_reset["Attended"] = ""
+            save_data(df_reset)
 
-        st.success("System reset successfully")
-        st.rerun()
+            st.session_state.page = "home"
+            st.session_state.ticket_value = ""
+            st.session_state.search_value = ""
+
+            st.success("Attendance reset successfully")
+            st.rerun()
 
 
 # =========================
