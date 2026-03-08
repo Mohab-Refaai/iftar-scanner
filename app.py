@@ -11,6 +11,7 @@ FILE_PATH = "attendees.xlsx"
 
 st.set_page_config(page_title="Iftar Check-in System", page_icon="🎟️", layout="wide")
 
+
 # =========================
 # HELPERS
 # =========================
@@ -54,6 +55,7 @@ def get_column_map(df):
 
 
 def display_person_details(row, col_map):
+
     st.markdown("### Attendee Details")
 
     c1, c2 = st.columns(2)
@@ -101,10 +103,12 @@ def process_ticket(ticket_value, df, col_map):
     else:
         df.loc[idx, col_map["attended"]] = "YES"
         save_data(df)
+
         row = df.loc[idx]
         st.success("✅ APPROVED")
 
     display_person_details(row, col_map)
+
     return df
 
 
@@ -156,7 +160,6 @@ with col2:
         df_reset["Attended"] = ""
         save_data(df_reset)
 
-        # reset only needed state
         st.session_state.page = "home"
         st.session_state.ticket_value = ""
         st.session_state.search_value = ""
@@ -173,7 +176,8 @@ if st.session_state.page == "home":
     option = st.radio(
         "Choose Check-in Method",
         ["Scan QR Code", "Search Attendee"],
-        horizontal=True
+        horizontal=True,
+        key="mode"
     )
 
     st.write("")
@@ -181,7 +185,7 @@ if st.session_state.page == "home":
     # =========================
     # QR SCAN
     # =========================
-    if option == "Scan QR Code":
+    if st.session_state.mode == "Scan QR Code":
 
         st.subheader("Scan Ticket QR")
 
@@ -192,10 +196,11 @@ if st.session_state.page == "home":
             st.session_state.page = "result"
             st.rerun()
 
+
     # =========================
     # SEARCH
     # =========================
-    elif option == "Search Attendee":
+    elif st.session_state.mode == "Search Attendee":
 
         st.subheader("Search Attendee")
 
@@ -204,7 +209,8 @@ if st.session_state.page == "home":
         with colA:
             search = st.text_input(
                 "Search by Name / Email / Phone / Ticket ID",
-                key="search_value"
+                key="search_value",
+                placeholder="Type any letter like m or a"
             )
 
         with colB:
@@ -300,3 +306,4 @@ st.download_button(
     file_name="attendance_updated.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
+
