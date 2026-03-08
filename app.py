@@ -22,6 +22,8 @@ def load_data():
     if "Attended" not in df.columns:
         df["Attended"] = ""
 
+    df["Attended"] = df["Attended"].fillna("")
+
     return df
 
 
@@ -36,8 +38,7 @@ def normalize_text(value):
 
 
 def is_attended(value):
-    value = normalize_text(value).lower()
-    return value in ["yes", "y", "true", "1", "checked", "attended"]
+    return str(value).strip().upper() == "YES"
 
 
 def get_column_map(df):
@@ -125,28 +126,6 @@ if not os.path.exists(FILE_PATH):
 data = load_data()
 col_map = get_column_map(data)
 
-required_missing = []
-if not col_map["name"]:
-    required_missing.append("Full Name")
-if not col_map["email"]:
-    required_missing.append("Email Address")
-if not col_map["phone"]:
-    required_missing.append("Phone Number")
-if not col_map["ticket_id"]:
-    required_missing.append("Ticket_ID")
-if not col_map["ticket_type"]:
-    required_missing.append("Please select your ticket type:")
-if not col_map["payment_method"]:
-    required_missing.append("Payment Method")
-if not col_map["attended"]:
-    required_missing.append("Attended")
-
-if required_missing:
-    st.error("Missing required columns in Excel file:")
-    for item in required_missing:
-        st.write("-", item)
-    st.stop()
-
 
 # =========================
 # SESSION STATE
@@ -165,15 +144,29 @@ if "selected_person" not in st.session_state:
 
 
 # =========================
-# UI
+# HEADER + RESET
 # =========================
-st.title("🎟️ Iftar Check-in System")
+col1, col2 = st.columns([6,1])
+
+with col1:
+    st.title("🎟️ Iftar Check-in System")
+
+with col2:
+    if st.button("🔄 Reset"):
+        df_reset = load_data()
+        df_reset["Attended"] = ""
+        save_data(df_reset)
+
+        st.session_state.clear()
+        st.success("System reset successfully")
+        st.rerun()
 
 
 # =========================
 # HOME PAGE
 # =========================
 if st.session_state.page == "home":
+
     option = st.radio(
         "Choose Check-in Method",
         ["Scan QR Code", "Search Attendee"],
@@ -183,7 +176,9 @@ if st.session_state.page == "home":
     st.write("")
 
     if option == "Scan QR Code":
+
         st.subheader("Scan Ticket QR")
+
         scanned_value = qrcode_scanner("Scan attendee QR code")
 
         if scanned_value:
@@ -192,17 +187,18 @@ if st.session_state.page == "home":
             st.rerun()
 
     elif option == "Search Attendee":
+
         st.subheader("Search Attendee")
 
         search = st.text_input(
             "Search by Name / Email / Phone / Ticket ID",
-            value=st.session_state.search_value,
-            placeholder="Type any part of the name, email, phone, or ticket ID..."
+            value=st.session_state.search_value
         )
 
         st.session_state.search_value = search
 
         if search:
+
             search_lower = search.strip().lower()
 
             result_mask = (
@@ -215,35 +211,40 @@ if st.session_state.page == "home":
             results = data[result_mask].copy()
 
             if results.empty:
+
                 st.error("❌ No attendee found")
+
             else:
+
                 results = results.reset_index()
+
                 results["display_label"] = results.apply(
                     lambda row: build_search_label(row, col_map), axis=1
                 )
 
-                st.success(f"Found {len(results)} result(s)")
-
                 selected_label = st.selectbox(
                     "Select attendee",
-                    options=results["display_label"].tolist(),
-                    index=0
+                    options=results["display_label"].tolist()
                 )
 
                 selected_row = results[results["display_label"] == selected_label].iloc[0]
                 selected_idx = selected_row["index"]
 
                 st.write("")
+
                 display_person_details(data.loc[selected_idx], col_map)
 
                 if is_attended(data.loc[selected_idx, col_map["attended"]]):
-                    st.warning("⚠️ ALREADY CHECKED")
-                else:
-                    st.info("Not checked in yet")
 
-                    if st.button("✅ Check-in Selected Attendee", key=f"checkin_{selected_idx}"):
+                    st.warning("⚠️ ALREADY CHECKED")
+
+                else:
+
+                    if st.button("✅ Check-in Selected Attendee"):
+
                         data.loc[selected_idx, col_map["attended"]] = "YES"
                         save_data(data)
+
                         st.success("✅ Checked In Successfully")
                         st.rerun()
 
@@ -252,12 +253,13 @@ if st.session_state.page == "home":
 # RESULT PAGE
 # =========================
 elif st.session_state.page == "result":
+
     st.subheader("Ticket Result")
 
     data = load_data()
+
     process_ticket(st.session_state.ticket_value, data, col_map)
 
-    st.write("")
     st.button("⬅ Back to Home", on_click=go_home)
 
 
@@ -267,8 +269,11 @@ elif st.session_state.page == "result":
 st.divider()
 
 latest_data = load_data()
+
 buffer = BytesIO()
+
 latest_data.to_excel(buffer, index=False)
+
 buffer.seek(0)
 
 st.download_button(
