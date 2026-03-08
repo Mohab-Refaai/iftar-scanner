@@ -11,7 +11,6 @@ FILE_PATH = "attendees.xlsx"
 
 st.set_page_config(page_title="Iftar Check-in System", page_icon="🎟️", layout="wide")
 
-
 # =========================
 # HELPERS
 # =========================
@@ -139,6 +138,9 @@ if "page" not in st.session_state:
 if "ticket_value" not in st.session_state:
     st.session_state.ticket_value = ""
 
+if "search_value" not in st.session_state:
+    st.session_state.search_value = ""
+
 
 # =========================
 # HEADER
@@ -153,7 +155,12 @@ with col2:
         df_reset = load_data()
         df_reset["Attended"] = ""
         save_data(df_reset)
-        st.session_state.clear()
+
+        # reset only needed state
+        st.session_state.page = "home"
+        st.session_state.ticket_value = ""
+        st.session_state.search_value = ""
+
         st.success("System reset successfully")
         st.rerun()
 
