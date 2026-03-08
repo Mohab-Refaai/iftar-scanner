@@ -212,9 +212,9 @@ if st.session_state.page == "home":
 
         with colA:
             search = st.text_input(
-                "Search by Name / Email / Phone / Ticket ID",
+                "",
                 key="search_value",
-                placeholder="Type any letter like m or a"
+                placeholder="Search by Name / Email / Phone / Ticket ID"
             )
 
         with colB:
